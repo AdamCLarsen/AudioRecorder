@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 pub struct CircularBuffer<const N: usize, T> {
-    data: [Option<T>; N],
+    data: Vec<Option<T>>,
     write_index: usize,
 }
 
 impl<const N: usize, T: Copy> CircularBuffer<N, T> {
     pub fn new() -> Self {
         CircularBuffer {
-            data: [None; N],
+            data: vec![None; N],
             write_index: 0,
         }
     }

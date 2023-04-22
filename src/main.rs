@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         INTPUT_TIMEOUT
     )?;
 
+    println!("Starting stream");
     stream.play()?;
 
     // Keep the main thread alive until the user stops the program.

@@ -3,6 +3,7 @@
 use std::time::Instant;
 use std::{sync::Arc};
 use hound::WavWriter;
+use chrono::prelude::*;
 use crate::circular_buffer::CircularBuffer;
 const BUFFER_SIZE: usize = 16000 * 20;  // Assuming a standerd 16khz sample rate, this is 20 seconds of audio
 
@@ -39,7 +40,7 @@ impl RecordingHead {
             wav_spec: hound::WavSpec {
                 channels: 1,
                 sample_rate: sample_rate.0 as u32,
-                bits_per_sample: 16,
+                bits_per_sample: 32,
                 sample_format: hound::SampleFormat::Float,
             },
             audio_buffer: Arc::new(std::sync::Mutex::new(CircularBuffer::<BUFFER_SIZE, f32>::new()))
@@ -68,7 +69,8 @@ impl RecordingHead {
     pub fn get_rms_as_db(&self, sample_count: usize) -> f32 {
         let audio_buffer = self.audio_buffer.lock().unwrap();
         let rms = calculate_rms(audio_buffer.read_fifo_last_n(sample_count));
-        return 20.0 * rms.log10();
+        let result = 20.0 * rms.log10();
+        return result;
     }
 
     pub fn update_noise_state(&mut self, noise: NoiseStates) {
@@ -93,6 +95,7 @@ impl RecordingHead {
                     // TODO: flush any remaining audio to the file, update the RIFF header with the lengths, and close the file.
                     let writer = self.wav_writer.take().expect("Nothing to do if we don't have a file.");
                     writer.finalize().expect("Failed to finalize WAV file");
+                    println!("Finished recording");
                     self.recording_state = RecordingStates::Waiting;
                 }
             },
@@ -103,7 +106,12 @@ impl RecordingHead {
                 }
 
                 if self.last_state_change.elapsed().as_millis() > 750 {
-                    let mut writer = WavWriter::create("output.wav", self.wav_spec).expect("Failed to create WAV file");
+
+                    let now = Utc::now();
+                    let filename = now.format("rec_%Y-%m-%d_%H-%M-%S.wav").to_string();
+                    //let filename = fs::canonicalize(filename).unwrap();
+                    println!("Recording to file: {}", filename);
+                    let mut writer = WavWriter::create(filename, self.wav_spec).expect("Failed to create WAV file");
                     let audio_buffer = self.audio_buffer.lock().unwrap();
                     for &sample in audio_buffer.read_fifo_all() {
                         writer.write_sample(sample).unwrap();
