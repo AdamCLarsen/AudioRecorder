@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub struct CircularBuffer<const N: usize, T> {
     data: [Option<T>; N],
     write_index: usize,
@@ -16,12 +17,26 @@ impl<const N: usize, T: Copy> CircularBuffer<N, T> {
         self.write_index = (self.write_index + 1) % N;
     }
 
-    #[allow(dead_code)]
     pub fn read_fifo(&self) -> Vec<&T> {
         let mut fifo = Vec::new();
         let mut read_index = self.write_index;
 
         for _ in 0..N {
+            if let Some(ref value) = self.data[read_index] {
+                fifo.push(value);
+            }
+
+            read_index = (read_index + 1) % N;
+        }
+
+        fifo
+    }
+
+    pub fn read_fifo_last_n(&self, last_n: usize) -> Vec<&T> {
+        let mut fifo = Vec::new();
+        let mut read_index = if self.write_index >= last_n { self.write_index - last_n } else { N - (last_n - self.write_index) };
+
+        for _ in 0..last_n {
             if let Some(ref value) = self.data[read_index] {
                 fifo.push(value);
             }
@@ -54,6 +69,9 @@ mod tests {
 
         let fifo_values = buffer.read_fifo();
         assert_eq!(fifo_values, [&6, &2, &3, &4, &5]);
+
+        let fifo_last_n_values = buffer.read_fifo_last_n(3);
+        assert_eq!(fifo_last_n_values, [&3, &4, &5]);
 
         let unordered_values = buffer.read_unordered();
         let unordered_expected: Vec<&i32> = vec![&6, &2, &3, &4, &5];

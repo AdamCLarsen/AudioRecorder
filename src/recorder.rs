@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
 use std::time::Instant;
+use std::{sync::Arc};
+use crate::circular_buffer::CircularBuffer;
+const BUFFER_SIZE: usize = 16000 * 20;  // Assuming a standerd 16khz sample rate, this is 20 seconds of audio
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -18,24 +21,38 @@ pub enum NoiseStates {
     Quiet
 }
 
-#[derive(Debug)]
-pub struct RecorderState{
+pub struct RecordingHead{
     pub recording_state: RecordingStates,
     noise_state: NoiseStates,
     last_state_change: Instant,
+    audio_buffer: Arc<std::sync::Mutex<CircularBuffer<BUFFER_SIZE, f32>>>,
 }
 
-impl RecorderState {
+impl RecordingHead {
 
     pub fn new() -> Self {
-        RecorderState {
+        RecordingHead {
             recording_state: RecordingStates::Waiting,
             noise_state: NoiseStates::Quiet,
             last_state_change: Instant::now(),
+            audio_buffer: Arc::new(std::sync::Mutex::new(CircularBuffer::<BUFFER_SIZE, f32>::new()))
         }
     }
 
-    pub fn set_noise_state(&mut self, noise: NoiseStates) {
+    pub fn put(&self, data: &[f32]) {
+        let mut audio_buffer = self.audio_buffer.lock().unwrap();
+        for &sample in data {
+            audio_buffer.put(sample); // Update the callback to use the put method
+        }
+    }
+
+    pub fn get_rms_as_db(&self, sample_count: usize) -> f32 {
+        let audio_buffer = self.audio_buffer.lock().unwrap();
+        let rms = calculate_rms(audio_buffer.read_fifo_last_n(sample_count));
+        return 20.0 * rms.log10();
+    }
+
+    pub fn update_noise_state(&mut self, noise: NoiseStates) {
         if self.noise_state == noise {
             self.update_state();
             return;
@@ -87,5 +104,10 @@ impl RecorderState {
                 }
             },
         }
-    }
+    }   
+}
+
+fn calculate_rms(data:Vec<&f32>) -> f32 {
+    let sum: f32 = data.iter().map(|&sample| *sample * *sample).sum();
+    (sum / (data.len() as f32)).sqrt()
 }
