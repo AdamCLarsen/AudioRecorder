@@ -20,7 +20,7 @@ pub enum NoiseStates {
 
 #[derive(Debug)]
 pub struct RecorderState{
-    recording_state: RecordingStates,
+    pub recording_state: RecordingStates,
     noise_state: NoiseStates,
     last_state_change: Instant,
 }
@@ -69,7 +69,7 @@ impl RecorderState {
                    return;
                 }
 
-                if self.last_state_change.elapsed().as_secs() > 30 {
+                if self.last_state_change.elapsed().as_secs() > 10 {
                     self.recording_state = RecordingStates::PostRoll;
                 }
             },
