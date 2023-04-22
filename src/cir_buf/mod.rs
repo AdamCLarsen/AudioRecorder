@@ -16,6 +16,7 @@ impl<const N: usize, T: Copy> CircularBuffer<N, T> {
         self.write_index = (self.write_index + 1) % N;
     }
 
+    #[allow(dead_code)]
     pub fn read_fifo(&self) -> Vec<&T> {
         let mut fifo = Vec::new();
         let mut read_index = self.write_index;

@@ -1,22 +1,24 @@
+#![allow(dead_code)]
+
 const INTPUT_TIMEOUT: Option<Duration> = Some(Duration::from_millis(250));
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::{error::Error, sync::Arc, thread, time::Duration};
 
 mod cir_buf; // Import the circular buffer module
-use cir_buf::CircularBuffer; // Import the CircularBuffer
-
+mod recorder;
 const BUFFER_SIZE: usize = 750;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let host = cpal::default_host();
     let input_device = host.default_input_device().expect("Failed to get default input device");
     let input_config = input_device.default_input_config()?;
-
+    let recording_state = Arc::new(recorder::RecorderState::new());
+ 
     println!("Default input device: {:?}", input_device.name()?);
     println!("Default input config: {:?}", input_config);
 
-    let audio_buffer = Arc::new(std::sync::Mutex::new(CircularBuffer::<BUFFER_SIZE, f32>::new())); // Replace VecDeque with CircularBuffer
+    let audio_buffer = Arc::new(std::sync::Mutex::new(cir_buf::CircularBuffer::<BUFFER_SIZE, f32>::new())); // Replace VecDeque with CircularBuffer
 
     let stream = input_device.build_input_stream(
         &input_config.config(),
