@@ -1,11 +1,9 @@
-#![allow(dead_code)]
-
 const INTPUT_TIMEOUT: Option<Duration> = Some(Duration::from_millis(250));
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::{error::Error, sync::Arc, thread, time::Duration};
-mod circular_buffer; // Import the circular buffer module
 
+mod circular_buffer; // Import the circular buffer module
 mod recorder;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -15,7 +13,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let input_device = host.default_input_device().expect("Failed to get default input device");
     let input_default_config = input_device.default_input_config()?;
-    let recording_head = Arc::new(std::sync::Mutex::new(recorder::RecordingHead::new()));
     
     // input_device.supported_input_configs().unwrap().enumerate().for_each(|config| println!("Input Config[{}]: {:?}", config.0, config.1));
     // TODO: Look into the supported_input_configs() method and make sure one can do 16Khz or at least 8Khz.
@@ -29,6 +26,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         buffer_size: cpal::BufferSize::Fixed(input_buffer_size),
     };
     
+    let recording_head = Arc::new(std::sync::Mutex::new(recorder::RecordingHead::new(sample_rate)));
+
     println!("Using input device: {:?}", input_device.name()?);
     println!("\tWith config: {:?}", input_config);
     
@@ -37,8 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         {
             let recording_head = recording_head.clone();
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                let audio_buffer = recording_head.lock().unwrap();
-                audio_buffer.put(data);
+                let mut recording_head = recording_head.lock().unwrap();
+                recording_head.put(data);
             }
         },
         move |_err| (),

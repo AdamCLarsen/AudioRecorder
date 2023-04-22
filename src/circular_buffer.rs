@@ -17,7 +17,7 @@ impl<const N: usize, T: Copy> CircularBuffer<N, T> {
         self.write_index = (self.write_index + 1) % N;
     }
 
-    pub fn read_fifo(&self) -> Vec<&T> {
+    pub fn read_fifo_all(&self) -> Vec<&T> {
         let mut fifo = Vec::new();
         let mut read_index = self.write_index;
 
@@ -67,7 +67,7 @@ mod tests {
         buffer.put(5);
         buffer.put(6); // overwrites first value
 
-        let fifo_values = buffer.read_fifo();
+        let fifo_values = buffer.read_fifo_all();
         assert_eq!(fifo_values, [&6, &2, &3, &4, &5]);
 
         let fifo_last_n_values = buffer.read_fifo_last_n(3);
