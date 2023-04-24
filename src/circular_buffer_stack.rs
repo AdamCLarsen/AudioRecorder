@@ -1,20 +1,30 @@
 #![allow(dead_code)]
-pub struct CircularBuffer<const N: usize, T> {
-    data: Vec<Option<T>>,
+pub struct CircularBufferStack<const N: usize, T> {
+    data: [Option<T>; N],
     write_index: usize,
+    loop_count: usize,
 }
 
-impl<const N: usize, T: Copy> CircularBuffer<N, T> {
+impl<const N: usize, T: Copy> CircularBufferStack<N, T> {
     pub fn new() -> Self {
-        CircularBuffer {
-            data: vec![None; N],
+        CircularBufferStack {
+            data: [None; N],
             write_index: 0,
+            loop_count: 0,
         }
     }
 
     pub fn put(&mut self, item: T) {
         self.data[self.write_index] = Some(item);
         self.write_index = (self.write_index + 1) % N;
+
+        if self.write_index == 0 {
+            self.loop_count += 1;
+        }
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.loop_count > 0
     }
 
     pub fn clone(&self) -> Vec<&T> {
@@ -54,11 +64,11 @@ impl<const N: usize, T: Copy> CircularBuffer<N, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::CircularBuffer;
+    use super::CircularBufferStack;
 
     #[test]
     fn test_circular_buffer() {
-        let mut buffer = CircularBuffer::<5, i32>::new();
+        let mut buffer = CircularBufferStack::<5, i32>::new();
 
         buffer.put(1);
         buffer.put(2);

@@ -1,17 +1,26 @@
 #![allow(dead_code)]
 
 use std::time::Instant;
+use std::fmt;
 use std::{sync::Arc};
 use hound::WavWriter;
 use chrono::prelude::*;
 use crate::circular_buffer::CircularBuffer;
 const BUFFER_SIZE: usize = 16000 * 20;  // Assuming a standerd 16khz sample rate, this is 20 seconds of audio
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum RecordingStates {
     Recording, // Recording
     Waiting,
+}
+
+impl fmt::Display for RecordingStates {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RecordingStates::Recording => write!(f, "Recording"),
+            RecordingStates::Waiting => write!(f, "Waiting"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -22,7 +31,7 @@ pub enum NoiseStates {
 }
 
 pub struct RecordingHead{
-    recording_state: RecordingStates,
+    pub recording_state: RecordingStates,
     noise_state: NoiseStates,
     last_state_change: Instant,
     wav_writer: Option< WavWriter<std::io::BufWriter<std::fs::File>> >,
@@ -68,7 +77,7 @@ impl RecordingHead {
 
     pub fn get_rms_as_db(&self, sample_count: usize) -> f32 {
         let audio_buffer = self.audio_buffer.lock().unwrap();
-        let rms = calculate_rms(audio_buffer.read_fifo_last_n(sample_count));
+        let rms = calculate_rms(audio_buffer.clone_last_n(sample_count));
         let result = 20.0 * rms.log10();
         return result;
     }
@@ -113,7 +122,7 @@ impl RecordingHead {
                     println!("Recording to file: {}", filename);
                     let mut writer = WavWriter::create(filename, self.wav_spec).expect("Failed to create WAV file");
                     let audio_buffer = self.audio_buffer.lock().unwrap();
-                    for &sample in audio_buffer.read_fifo_all() {
+                    for &sample in audio_buffer.clone() {
                         writer.write_sample(sample).unwrap();
                     }
     

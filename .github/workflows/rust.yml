@@ -16,7 +16,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Update Cargo
+      run: |
+        sudo apt-get install -y libasound2-dev
+        sudo apt-get install -y libwebkit2gtk-4.0 
+        cargo update
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
